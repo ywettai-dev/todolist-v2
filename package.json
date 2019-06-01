@@ -8,6 +8,9 @@
   },
   "author": "ywettai-dev",
   "license": "ISC",
+  "engines": {
+    "node": "12.1.0"
+  },
   "dependencies": {
     "body-parser": "^1.18.3",
     "ejs": "^2.6.1",
