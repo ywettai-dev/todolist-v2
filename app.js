@@ -16,7 +16,7 @@ app.use(bodyParser.urlencoded({
 app.use(express.static("public"));
 
 //Create and establish database connection
-mongoose.connect("mongodb://localhost:27017/todolistDB", {
+mongoose.connect("mongodb+srv://admin-tai:221195JG@todocluster-qtuyb.mongodb.net/todolistDB", {
   useNewUrlParser: true
 });
 
