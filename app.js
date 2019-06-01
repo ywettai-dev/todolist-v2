@@ -3,6 +3,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const port = 3000;
 
 const app = express();
 
@@ -18,12 +19,12 @@ mongoose.connect("mongodb://localhost:27017/todolistDB", {
   useNewUrlParser: true
 });
 
-//Setup schema
+//Setup Item schema
 const itemSchema = {
   name: String
 }
 
-//Setup model
+//Setup item model
 const Item = mongoose.model("Item", itemSchema);
 
 const item1 = new Item({
@@ -39,6 +40,15 @@ const item3 = new Item({
 });
 
 const defaultItems = [item1, item2, item3];
+
+//Setup list schema
+const listSchema = {
+  name: String,
+  items: [itemSchema]
+}
+
+//Setup list model
+const List = mongoose.model("List", listSchema);
 
 // const items = ["Buy Food", "Cook Food", "Eat Food"];
 // const workItems = [];
@@ -67,28 +77,58 @@ app.get("/", function (req, res) {
 
 app.post("/", function (req, res) {
 
-  const item = req.body.newItem;
+  const newItem = req.body.newItem;
 
-  if (req.body.list === "Work") {
-    workItems.push(item);
-    res.redirect("/work");
-  } else {
-    items.push(item);
-    res.redirect("/");
-  }
-});
-
-app.get("/work", function (req, res) {
-  res.render("list", {
-    listTitle: "Work List",
-    newListItems: workItems
+  //Insert new item into items collection
+  const item = new Item({
+    name: newItem
   });
+
+  item.save()
+
+  res.redirect('/');
+
 });
 
-app.get("/about", function (req, res) {
-  res.render("about");
+//Delete item
+app.post('/delete', (req, res) => {
+  const checkedItem = req.body.checkedbox;
+
+  Item.findByIdAndRemove(checkedItem, (err => {
+    if (!err) {
+      console.log(`Successfully deleted the checked item!`);
+      res.redirect('/');
+    }
+
+  }));
 });
 
-app.listen(3000, function () {
-  console.log("Server started on port 3000");
+//Express dynamic routes
+app.get('/:customListName', (req, res) => {
+  const customListName = req.params.customListName;
+
+  List.findOne({
+    name: customListName
+  }, (err, foundList) => {
+    if (!err) {
+      if (!foundList) {
+        //Create a list route if it doesn't exist
+        const list = new List({
+          name: customListName,
+          items: defaultItems
+        });
+        list.save();
+        res.redirect('/' + customListName);
+      } else {
+        //Show an existing list
+        res.render('list', {
+          listTitle: foundList.name,
+          newListItems: foundList.items
+        });
+      }
+    }
+  });
+
 });
+
+app.listen(process.env.PORT || port, () => console.log(`Server starts on ${port}.`));
