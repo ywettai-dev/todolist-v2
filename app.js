@@ -4,6 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const port = 3000;
+const _ = require("lodash");
 
 const app = express();
 
@@ -18,6 +19,8 @@ app.use(express.static("public"));
 mongoose.connect("mongodb://localhost:27017/todolistDB", {
   useNewUrlParser: true
 });
+
+mongoose.set('useFindAndModify', false);
 
 //Setup Item schema
 const itemSchema = {
@@ -78,34 +81,60 @@ app.get("/", function (req, res) {
 app.post("/", function (req, res) {
 
   const newItem = req.body.newItem;
+  const listTitle = req.body.list;
 
   //Insert new item into items collection
   const item = new Item({
     name: newItem
   });
 
-  item.save()
-
-  res.redirect('/');
-
+  if (listTitle === "Today") {
+    item.save()
+    res.redirect('/');
+  } else {
+    List.findOne({
+      name: listTitle
+    }, (err, foundList) => {
+      foundList.items.push(item);
+      foundList.save();
+      res.redirect('/' + listTitle);
+    });
+  }
 });
 
 //Delete item
 app.post('/delete', (req, res) => {
   const checkedItem = req.body.checkedbox;
+  const listName = req.body.listName;
 
-  Item.findByIdAndRemove(checkedItem, (err => {
-    if (!err) {
-      console.log(`Successfully deleted the checked item!`);
-      res.redirect('/');
-    }
+  if (listName === "Today") {
+    Item.findByIdAndRemove(checkedItem, (err => {
+      if (!err) {
+        console.log(`Successfully deleted the checked item!`);
+        res.redirect('/');
+      }
+    }));
+  } else {
+    List.findOneAndUpdate({
+      name: listName
+    }, {
+      $pull: {
+        items: {
+          _id: checkedItem
+        }
+      }
+    }, (err, foundList) => {
+      if (!err) {
+        res.redirect('/' + listName);
+      }
+    });
+  }
 
-  }));
 });
 
 //Express dynamic routes
 app.get('/:customListName', (req, res) => {
-  const customListName = req.params.customListName;
+  const customListName = _.capitalize(req.params.customListName);
 
   List.findOne({
     name: customListName
